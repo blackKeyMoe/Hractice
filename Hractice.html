@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<title>My Test HTML</title>
-	<script type="text/javascript" src="/static/js/jquery-3.2.1.min.js"></script>
+	<script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
 	<style type="text/css">
 		a:link {
 			text-decoration: none;
@@ -285,7 +285,7 @@
 						<div class="tab"></div>
 					</div>
 					<div class="content">
-						<img src="static/res/22.jpg">
+						<img scommon_staticatic/res/22.jpg">
 					</div>
 				</div>
 
@@ -297,7 +297,7 @@
 						<div class="tab"></div>
 					</div>
 					<div class="content">
-						<img src="static/res/33.jpg">
+						<img scommon_staticatic/res/33.jpg">
 					</div>
 				</div>
 
@@ -309,7 +309,7 @@
 						<div class="tab"></div>
 					</div>
 					<div class="content">
-						<img src="static/res/22-2.jpg">
+						<img scommon_staticatic/res/22-2.jpg">
 					</div>
 				</div>
 
@@ -321,7 +321,7 @@
 						<div class="tab on"></div>
 					</div>
 					<div class="content">
-						<img src="static/res/33-2.jpg">
+						<img scommon_staticatic/res/33-2.jpg">
 					</div>
 				</div>
 			</div>
@@ -332,8 +332,10 @@
  		
  	</canvas>
  	<audio autoplay controls>
- 		<source src="/media/letter song.mp3" type="audio/mpeg">
- 	</audio>
+ 		<source src="../media/letter song.mp3" type="audio/mpeg">
+	</audio>
+	<input type="text" id="danmutext">
+	<input type="button" id="danmusubmit">
 
 </body>
 <script type="text/javascript">
@@ -344,14 +346,27 @@
 	var tracks = Array(30);
 	var can = document.getElementById("canvas");
 	var ctx = can.getContext("2d");
+	var track_plan = function(danmu){
+		$.each(tracks, function(i, item){
+			if(item == 0){
+				danmu.track = i;
+				item = 1;
+				return;
+			}
+		});	
+	};
 	var pythonduohaoa = function(danmuset){
 		$.each(danmuset, function(i, item){
 			if(!item)
 				return;
-			if(audio.currentTime - item.time > 7){
+			if(item.position!=1 && (audio.currentTime - item.time > 7)){
 				danmuset.splice(i, 1);
 			}
-			ctx.textAlign = "center";
+			if(item.position==1 && (item.x < -item.width*2)){
+				console.log(item.x, item.width);
+				danmuset.splice(i,1);
+			}
+			ctx.textAlign = item.position == 1?"left":"center";
 			ctx.fillStyle = item.color;
 			ctx.font = item.font + " Helvetica";
 			item.x -= item.vx;
@@ -377,34 +392,35 @@
 				ctx.clearRect(0, 0, can.width, can.height);
 				ctx.fillStyle = "#efefef"
 				ctx.fillRect(0, 0, can.width, can.height);
-				$.each(scrolldanmus, function(i, item){
-					if(!item)
-						return;
-					if(item.x < -item.width*2){
-						activedanmus.splice(i, 1);
-					}
-					ctx.textAlign = "left";
-					ctx.fillStyle = item.color;
-					ctx.font = item.font + " Helvetica";
-					item.x -= item.vx;
-					if(!item.track)
-						item.track = i % 30;
-					ctx.fillText(item.text, item.x, 16*(item.track+1));
-				});
+				pythonduohaoa(scrolldanmus);		
 				pythonduohaoa(topdanmus);
 				pythonduohaoa(bottomdanmus);
 			};
 		
-	$.getJSON("/static/danmu.json", function(data) {
+	$.getJSON("/static/dm.json", function(data) {
 		danmus = data.danmu;
 		$.each(danmus, function(i, item){
 			ctx.font = item.font;
 			item.width = ctx.measureText(item.text).width;
 			item.x = can.width * (item.position>0?item.position:-item.position);
 			item.vx = (item.width + can.width) / 350 * (item.position>0.7?1:0);
-			console.log(ctx.measureText(item.text).width)
+			//console.log(ctx.measureText(item.text).width)
 		});
 		setInterval(anirun, 20);
+	});
+	$("#danmusubmit").click(function(){
+		danmu = {};
+		danmu.text = $("#danmutext").val();
+		danmu.position = 1;
+		danmu.time = audio.currentTime + 2.0;
+		danmu.color = "black";
+		danmu.font = "16px";
+		danmu.width = ctx.measureText(danmu.text).width;
+		danmu.x = can.width * (danmu.position>0?danmu.position:-danmu.position);
+		danmu.vx = (danmu.width + can.width) / 350 * (danmu.position>0.7?1:0);
+		scrolldanmus.push(danmu);	
+		console.log(audio.currentTime);	
+		console.log(danmu);	
 	});
 	
 </script> 
