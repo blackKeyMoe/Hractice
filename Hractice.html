@@ -245,7 +245,6 @@
 			from {opacity: 0;}
 		}
 */
-	
 
 	</style>
 </head>
@@ -328,7 +327,7 @@
 	 	</div>
 	</div>
  -->
- 	<canvas id="canvas" width="848px" height="480px">
+ 	<canvas id="canvas" width="1048px" height="480px">
  		
  	</canvas>
  	<audio autoplay controls>
@@ -336,43 +335,60 @@
 	</audio>
 	<input type="text" id="danmutext">
 	<input type="button" id="danmusubmit">
-
+	
 </body>
 <script type="text/javascript">
 	var MAX_DANMU_LEN = 50;
 	var audio = $("audio")[0];
 	var danmus = null;
 	var topdanmus = [], bottomdanmus = [], scrolldanmus = [];
-	var tracks = Array(30);
+	var tracks = Array(31);
+	var n = 0;
+	tracks[0] = 1;
+	for(i = 1; i<31; i++){
+		tracks[i] = null;	
+	}
 	var can = document.getElementById("canvas");
 	var ctx = can.getContext("2d");
+	var track_enabled = function(danmu, item){
+		if(!item)
+			return true;
+		if(item.x > can.width-item.width-32)
+			return false;
+		return (can.width - item.x - item.width) > ((item.x + item.width) / item.vx) * (danmu.vx - item.vx)
+	};
 	var track_plan = function(danmu){
-		$.each(tracks, function(i, item){
-			if(item == 0){
+		for(i=1	; i<31; i++){
+			if(track_enabled(danmu, tracks[i])){
 				danmu.track = i;
-				item = 1;
-				return;
+				tracks[i] = danmu;	
+				break;
 			}
-		});	
+		}
 	};
 	var pythonduohaoa = function(danmuset){
 		$.each(danmuset, function(i, item){
 			if(!item)
 				return;
-			if(item.position!=1 && (audio.currentTime - item.time > 7)){
-				danmuset.splice(i, 1);
-			}
-			if(item.position==1 && (item.x < -item.width*2)){
-				console.log(item.x, item.width);
-				danmuset.splice(i,1);
-			}
+			if(!item.track && item.position==1)
+				track_plan(item);
+			if(!item.track && item.position!=1)
+				item.track = item.position<0?29 - i % 30:i % 30 + 1;
 			ctx.textAlign = item.position == 1?"left":"center";
 			ctx.fillStyle = item.color;
 			ctx.font = item.font + " Helvetica";
 			item.x -= item.vx;
-			if(!item.track)
-				item.track = item.position<0?28 - i % 30:i % 30;
-			ctx.fillText(item.text, item.x, 16*(item.track+1));
+			if(item.position==1 && item.x > tracks[item.track].x){
+				tracks[item.track] = item;
+			}
+			
+			ctx.fillText(item.text, item.x, 16*item.track);
+			if(item.position!=1 && (audio.currentTime-item.time > 7)){
+				danmuset.splice(i, 1);
+			}
+			if(item.position==1 && (item.x <= -item.width)){
+				danmuset.splice(i,1);
+			}
 		});
 	};
 	var anirun = function(){
@@ -400,13 +416,12 @@
 	$.getJSON("/static/dm.json", function(data) {
 		danmus = data.danmu;
 		$.each(danmus, function(i, item){
-			ctx.font = item.font;
+			ctx.font = item.font + " Helvetica";
 			item.width = ctx.measureText(item.text).width;
 			item.x = can.width * (item.position>0?item.position:-item.position);
 			item.vx = (item.width + can.width) / 350 * (item.position>0.7?1:0);
-			//console.log(ctx.measureText(item.text).width)
 		});
-		setInterval(anirun, 20);
+		n = setInterval(anirun, 20);
 	});
 	$("#danmusubmit").click(function(){
 		danmu = {};
@@ -415,12 +430,12 @@
 		danmu.time = audio.currentTime + 2.0;
 		danmu.color = "black";
 		danmu.font = "16px";
+		ctx.font = danmu.font + " Helvetica";
 		danmu.width = ctx.measureText(danmu.text).width;
 		danmu.x = can.width * (danmu.position>0?danmu.position:-danmu.position);
 		danmu.vx = (danmu.width + can.width) / 350 * (danmu.position>0.7?1:0);
 		scrolldanmus.push(danmu);	
-		console.log(audio.currentTime);	
-		console.log(danmu);	
+		console.log(danmu, ctx.font);
 	});
 	
 </script> 
