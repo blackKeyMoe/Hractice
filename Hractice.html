@@ -350,6 +350,29 @@
 	}
 	var can = document.getElementById("canvas");
 	var ctx = can.getContext("2d");
+
+	var update_danmus = function(){
+		$.each(danmus, function(i, item){
+			if(!item)
+				return;
+			if(item.time - audio.currentTime < 0.01){
+				if(item.position < 0)
+					bottomdanmus.push(item);
+				else if(item.position < 0.7)
+					topdanmus.push(item);
+				else
+					scrolldanmus.push(item);
+				danmus.splice(i, 1);
+			}
+		});
+	};
+
+	var clear_frame = function(){
+		ctx.clearRect(0, 0, can.width, can.height);
+		ctx.fillStyle = "#efefef00";
+		ctx.fillRect(0, 0, can.width, can.height);
+	};
+
 	var track_enabled = function(danmu, item){
 		if(!item)
 			return true;
@@ -357,7 +380,8 @@
 			return false;
 		return (can.width - item.x - item.width) > ((item.x + item.width) / item.vx) * (danmu.vx - item.vx)
 	};
-	var track_plan = function(danmu){
+
+	var track_select = function(danmu){
 		for(i=1	; i<31; i++){
 			if(track_enabled(danmu, tracks[i])){
 				danmu.track = i;
@@ -366,23 +390,30 @@
 			}
 		}
 	};
-	var pythonduohaoa = function(danmuset){
+	
+	var set_brush = function(danmu, font_type){
+		font_type = " " + font_type || "Helvetica"
+		ctx.textAlign = danmu.position == 1?"left":"center";
+		ctx.fillStyle = danmu.color;
+		ctx.font = danmu.font + font_type;
+		danmu.x -= danmu.vx;
+	};
+
+	var draw_danmu = function(danmuset){
 		$.each(danmuset, function(i, item){
 			if(!item)
 				return;
 			if(!item.track && item.position==1)
-				track_plan(item);
+				track_select(item);
 			if(!item.track && item.position!=1)
 				item.track = item.position<0?29 - i % 30:i % 30 + 1;
-			ctx.textAlign = item.position == 1?"left":"center";
-			ctx.fillStyle = item.color;
-			ctx.font = item.font + " Helvetica";
-			item.x -= item.vx;
+
+			set_brush(item);
+			ctx.fillText(item.text, item.x, 16*item.track);
+
 			if(item.position==1 && item.x > tracks[item.track].x){
 				tracks[item.track] = item;
 			}
-			
-			ctx.fillText(item.text, item.x, 16*item.track);
 			if(item.position!=1 && (audio.currentTime-item.time > 7)){
 				danmuset.splice(i, 1);
 			}
@@ -392,26 +423,12 @@
 		});
 	};
 	var anirun = function(){
-				$.each(danmus, function(i, item){
-					if(!item)
-						return;
-					if(item.time - audio.currentTime < 0.01){
-						if(item.position < 0)
-							bottomdanmus.push(item);
-						else if(item.position < 0.7)
-							topdanmus.push(item);
-						else
-							scrolldanmus.push(item);
-						danmus.splice(i, 1);
-					}
-				});
-				ctx.clearRect(0, 0, can.width, can.height);
-				ctx.fillStyle = "#efefef"
-				ctx.fillRect(0, 0, can.width, can.height);
-				pythonduohaoa(scrolldanmus);		
-				pythonduohaoa(topdanmus);
-				pythonduohaoa(bottomdanmus);
-			};
+		update_danmus();
+		clear_frame();
+		draw_danmu(scrolldanmus);		
+		draw_danmu(topdanmus);
+		draw_danmu(bottomdanmus);
+	};
 		
 	$.getJSON("/static/dm.json", function(data) {
 		danmus = data.danmu;
